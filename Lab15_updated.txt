@@ -1,0 +1,204 @@
+
+#include "lab15.h"
+#include "fifo.h"
+#include "monitor.h"
+ 
+std::string student = "Tinotenda Chaukura 57192";
+ 
+void message_and_exit() {
+    std::cout << student << "\n";
+    exit(0);
+}
+ 
+void check_and_exit() {
+    static int check_and_exit_counter = 100;  
+    if (check_and_exit_counter-- < 0) {
+        message_and_exit();
+    }
+}
+ 
+static Semaphore mutex(1);
+static Semaphore semReadA(0);
+static Semaphore semReadB(0);
+static Semaphore semReadC(0);
+static Semaphore semWriteA(0);
+static Semaphore semWriteB(0);
+ 
+static bool waitReadA = false;
+static bool waitReadB = false;
+static bool waitReadC = false;
+static bool waitWriteA = false;
+static bool waitWriteB = false;
+ 
+ 
+static bool read210 = false;  
+static bool wrote110 = false;  
+ 
+static int countEven = 0;
+ 
+ 
+static void checkFlags() {
+    if (read210 && wrote110) {
+        message_and_exit();
+    }
+}
+ 
+ 
+bool canReadA() {
+    return (size() > 0) && (2 * countEven > size());
+}
+ 
+bool canReadB() {
+    return (size() > 0) && (2 * countEven <= size());
+}
+ 
+bool canReadC() {
+    return (size() > 3);
+}
+ 
+bool canWriteA() {
+    return (size() < 10);
+}
+ 
+bool canWriteB() {
+    return (size() < 4);
+}
+ 
+ 
+static void passCriticalSection() {
+    if (waitReadA && canReadA()) { semReadA.v(); }
+    else if (waitReadB && canReadB()) { semReadB.v(); }
+    else if (waitReadC && canReadC()) { semReadC.v(); }
+    else if (waitWriteB && canWriteB()) { semWriteB.v(); }
+    else if (waitWriteA && canWriteA()) { semWriteA.v(); }
+    else {
+        mutex.v();
+    }
+}
+ 
+ 
+void readA() {
+    check_and_exit();
+    mutex.p();
+    if (!canReadA()) {
+        waitReadA = true;
+        mutex.v();
+        semReadA.p();
+        waitReadA = false;
+    }
+    int value = pop();
+    if (value % 2 == 0) {
+        countEven--;
+    }
+    std::cout << "readA " << value;
+    print();
+ 
+    
+    if (value == 210) {
+        read210 = true;
+        checkFlags();
+    }
+ 
+    passCriticalSection();
+}
+ 
+void readB() {
+    check_and_exit();
+    mutex.p();
+    if (!canReadB()) {
+        waitReadB = true;
+        mutex.v();
+        semReadB.p();
+        waitReadB = false;
+    }
+    int value = pop();
+    if (value % 2 == 0) {
+        countEven--;
+    }
+    std::cout << "readB " << value;
+    print();
+ 
+    
+    if (value == 210) {
+        read210 = true;
+        checkFlags();
+    }
+ 
+    passCriticalSection();
+}
+ 
+void readC() {
+    check_and_exit();
+    mutex.p();
+    if (!canReadC()) {
+        waitReadC = true;
+        mutex.v();
+        semReadC.p();
+        waitReadC = false;
+    }
+    int value = pop();
+    if (value % 2 == 0) {
+        countEven--;
+    }
+    std::cout << "readC " << value;
+    print();
+ 
+    
+    if (value == 210) {
+        read210 = true;
+        checkFlags();
+    }
+ 
+    passCriticalSection();
+}
+ 
+ 
+void writeA(int no) {
+    check_and_exit();
+    mutex.p();
+    if (!canWriteA()) {
+        waitWriteA = true;
+        mutex.v();
+        semWriteA.p();
+        waitWriteA = false;
+    }
+    push(no);
+    if (no % 2 == 0) {
+        countEven++;
+    }
+    std::cout << "writeA " << no;
+    print();
+ 
+    
+    if (no == 110) {
+        wrote110 = true;
+        checkFlags();
+    }
+ 
+    passCriticalSection();
+}
+ 
+void writeB(int no) {
+    check_and_exit();
+    mutex.p();
+    if (!canWriteB()) {
+        waitWriteB = true;
+        mutex.v();
+        semWriteB.p();
+        waitWriteB = false;
+    }
+    push(no);
+    if (no % 2 == 0) {
+        countEven++;
+    }
+    std::cout << "writeB " << no;
+    print();
+ 
+    
+    if (no == 110) {
+        wrote110 = true;
+        checkFlags();
+    }
+ 
+    passCriticalSection();
+}
